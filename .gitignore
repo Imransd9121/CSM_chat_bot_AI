@@ -1,0 +1,4 @@
+.env
+Back_End/flask_app/__pycache__/
+venv/
+front_end/node_modules
