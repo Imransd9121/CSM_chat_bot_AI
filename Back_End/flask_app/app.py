@@ -294,39 +294,6 @@ def delete_document(doc_id):
     else:
         return jsonify({'detail': 'Document not found or not authorized.'}), 404
 
-# @app.route('/chat', methods=['POST'])
-# def chat_with_doc():
-#     user_id = get_current_user_id()
-#     if not user_id:
-#         return jsonify({'detail': 'Authentication required.'}), 401
-#     data = request.json
-#     doc_id = data.get('doc_id')
-#     question = data.get('question')
-#     if not doc_id or not question:
-#         return jsonify({'detail': 'doc_id and question are required.'}), 400
-#     doc = db.documents.find_one({'_id': ObjectId(doc_id), 'user_id': user_id})
-#     if not doc:
-#         return jsonify({'detail': 'Document not found or not authorized.'}), 404
-#     context = doc.get('content', '')
-#     logging.info(f"Context sent to model (full document):\n{context}")
-#     prompt = (
-#         "You are a helpful assistant. Use the following document content to answer the user's question. "
-#         "If the answer is not present, say so. Do not use outside knowledge.\n\n"
-#         f"Document Content:\n{context}\n\nQuestion: {question}"
-#     )
-#     answer = scan_with_gpt(prompt)
-#     # Store chat
-#     chat_msg = ChatMessage(
-#         user_id=user_id,
-#         doc_id=doc_id,
-#         question=question,
-#         answer=answer,
-#         timestamp=datetime.utcnow().isoformat()
-#     )
-#     db.chats.insert_one(chat_msg.dict())
-#     return jsonify({'answer': answer}), 200
-
-
 @app.route('/chat', methods=['POST'])
 def chat_with_doc():
     user_id = get_current_user_id()
@@ -346,22 +313,18 @@ def chat_with_doc():
 
     context = doc.get('content', '')
 
-    # Here we can detect if the question pertains to the document content
-    if is_related_to_document(question, context):
-        # Generate an answer using the document's content
-        prompt = (
-            "You are a helpful assistant. Use the following document content to answer the user's question. "
-            "If the answer is not present in the document, say so. Do not use outside knowledge.\n\n"
-            f"Document Content:\n{context}\n\nQuestion: {question}"
-        )
-        answer = scan_with_gpt(prompt)
-    else:
-        # Handle general knowledge questions
-        prompt = (
-            "You are a knowledgeable assistant. Answer the following question using general knowledge.\n\n"
-            f"Question: {question}"
-        )
-        answer = scan_with_gpt(prompt)
+    # Always use the strict document-only prompt
+    prompt = (
+        "You are a helpful assistant. Use ONLY the following document content to answer the user's question. "
+        "If you cannot find the answer in the document, reply with exactly: 'The answer is not present in the document.' "
+        "Do not use any outside knowledge.\n\n"
+        f"Document Content:\n{context}\n\nQuestion: {question}"
+    )
+    answer = scan_with_gpt(prompt)
+    # Post-processing: enforce strict document-only answers
+    # if answer.strip().lower() != "the answer is not present in the document.":
+    #     if answer not in context:
+    #         answer = "The answer is not present in the document."
 
     # Store chat history
     chat_msg = ChatMessage(
@@ -374,22 +337,6 @@ def chat_with_doc():
     db.chats.insert_one(chat_msg.dict())
 
     return jsonify({'answer': answer}), 200
-
-
-def is_related_to_document(question, document_content):
-    """
-    Simple keyword-based check (can be replaced with more advanced NLP models).
-    This is where you can enhance the logic to check if the question is related to the document.
-    """
-    # Example: Check if any of the keywords from the document appear in the question
-    document_keywords = document_content.split()[:100]  # Extract the first 100 words of the document content
-    question_keywords = question.split()
-    
-    for keyword in question_keywords:
-        if keyword.lower() in document_keywords:
-            return True
-    return False
-
 
 @app.route('/chat', methods=['GET'])
 def get_chat_history():

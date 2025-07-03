@@ -1,0 +1,14 @@
+The document "Prompt Engineering" by Lee Boonstra provides a detailed exploration of crafting effective prompts for large language models (LLMs). It begins with the premise that while anyone can write a prompt, creating an effective one is a nuanced task that requires understanding the model's mechanics and context.
+
+The whitepaper is structured into several sections, including an introduction to prompt engineering, various prompting techniques, best practices, and the importance of LLM output configurations such as temperature and sampling controls. Some specific prompting techniques discussed include:
+
+1. **General and Zero-shot Prompting**
+2. **One-shot and Few-shot Prompting**
+3. **System, Contextual, and Role Prompting**
+4. **Advanced Techniques**: such as Step-back prompting, Chain of Thought (CoT), Tree of Thoughts (ToT), and ReAct, which enhance prompts for more complex tasks.
+
+The document emphasizes the iterative nature of prompt engineering, where repeated tweaking and experimentation are necessary to optimize prompts based on the desired output. It also covers code prompting for tasks like generation, explanation, translation, and debugging.
+
+Best practices for crafting prompts include providing examples, keeping designs simple, being specific about expected outputs, controlling token lengths, and experimenting with different input formats. The document suggests collaboration with other prompt engineers for shared learning and highlights the need for documentation of varying prompt attempts.
+
+In summary, the document serves as a comprehensive guide for anyone looking to improve their skills in prompt engineering, presenting it as an accessible yet sophisticated domain within artificial intelligence.
