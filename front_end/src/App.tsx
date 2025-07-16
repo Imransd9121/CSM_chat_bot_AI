@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useDocuments } from './hooks/useDocuments';
 import { useChat } from './hooks/useChat';
@@ -7,10 +7,12 @@ import { AuthLayout } from './components/Layout/AuthLayout';
 import { Header } from './components/Layout/Header';
 import { LoginForm } from './components/Auth/LoginForm';
 import { RegisterForm } from './components/Auth/RegisterForm';
+import { ForgotPassword } from './components/Auth/ForgotPassword';
 import { DocumentUpload } from './components/Dashboard/DocumentUpload';
 import { DocumentList } from './components/Dashboard/DocumentList';
 import { ChatInterface } from './components/Chat/ChatInterface';
 import { Document } from './types';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 function AppContent() {
   const { user, loading, login, register, logout } = useAuth();
@@ -18,8 +20,14 @@ function AppContent() {
   const { documents, processingDocuments, uploadDocument, uploadFromUrl, deleteDocument } = useDocuments(token);
   const chat = useChat(user?.id || '', token);
   
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot-password'>('login');
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  useEffect(() => {
+    // Clear chat state when user changes (login/logout)
+    if (chat.clearChat) chat.clearChat();
+  }, [user?.id]);
 
   if (loading) {
     return (
@@ -39,11 +47,16 @@ function AppContent() {
           <LoginForm
             onLogin={login}
             onSwitchToRegister={() => setAuthMode('register')}
+            onForgotPassword={() => setAuthMode('forgot-password')}
           />
-        ) : (
+        ) : authMode === 'register' ? (
           <RegisterForm
             onRegister={register}
             onSwitchToLogin={() => setAuthMode('login')}
+          />
+        ) : (
+          <ForgotPassword
+            onBackToLogin={() => setAuthMode('login')}
           />
         )}
       </AuthLayout>
@@ -57,9 +70,15 @@ function AppContent() {
 
   const handleSendMessage = (message: string) => {
     if (selectedDocument && chat.currentSession) {
-      chat.sendMessage(message, selectedDocument);
+      chat.sendMessage(message, selectedDocument).then(() => {
+        setForceUpdate(f => f + 1);
+      });
     }
   };
+
+  // Add debugging log to check if messages are updating
+  console.log("Current session:", chat.currentSession);
+  console.log("Current session messages:", chat.currentSession?.messages);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
@@ -96,6 +115,7 @@ function AppContent() {
                 currentSessionId={chat.currentSession?.id}
                 onSelectSession={chat.selectSession}
                 onDeleteSession={chat.deleteSession}
+                selectedDocId={selectedDocument.id}
               />
             ) : (
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center h-[600px] flex items-center justify-center transition-colors duration-200">
@@ -123,7 +143,12 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <Routes>
+        <Route path="/login" element={<LoginForm />} />
+        <Route path="/register" element={<RegisterForm />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="*" element={<AppContent />} />
+      </Routes>
     </ThemeProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileText, ExternalLink, Loader2, CheckCircle, Trash2 } from 'lucide-react';
 import { Document } from '../../types';
 
@@ -18,11 +18,92 @@ export const DocumentList: React.FC<DocumentListProps> = ({
   selectedDocumentId
 }) => {
   const [deleteMessage, setDeleteMessage] = useState<string | null>(null);
+  const [podcastLoading, setPodcastLoading] = useState<string | null>(null); // docId loading
+  const [podcastUrl, setPodcastUrl] = useState<{ [docId: string]: string }>({});
+
+  // Check for podcast audio for each document on mount or when documents change
+  useEffect(() => {
+    const fetchPodcasts = async () => {
+      for (const doc of documents) {
+        if (!doc.id) continue;
+        try {
+          const res = await fetch(`http://localhost:5000/api/podcast/${doc.id}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          });
+          if (res.ok) {
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            setPodcastUrl(prev => ({ ...prev, [doc.id]: url }));
+          }
+        } catch (e) {
+          // Ignore errors (no podcast yet)
+        }
+      }
+    };
+    fetchPodcasts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documents]);
 
   const handleDelete = async (doc: Document) => {
     await onDeleteDocument(doc.id);
     setDeleteMessage(`Successfully deleted "${doc.name}"`);
     setTimeout(() => setDeleteMessage(null), 3000);
+  };
+
+  const handleConvertToPodcast = async (doc: Document) => {
+    setPodcastLoading(doc.id);
+    setDeleteMessage(null);
+    try {
+      const res = await fetch('http://localhost:5000/api/convert_to_podcast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ doc_id: doc.id })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setDeleteMessage(err.detail || 'Failed to convert to podcast');
+        setPodcastLoading(null);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setPodcastUrl((prev) => ({ ...prev, [doc.id]: url }));
+    } catch (e) {
+      setDeleteMessage('Failed to convert to podcast');
+    }
+    setPodcastLoading(null);
+  };
+
+  const handleDeletePodcast = async (doc: Document) => {
+    setPodcastLoading(doc.id);
+    setDeleteMessage(null);
+    try {
+      const res = await fetch(`http://localhost:5000/api/podcast/${doc.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setDeleteMessage(err.detail || 'Failed to delete podcast');
+        setPodcastLoading(null);
+        return;
+      }
+      setPodcastUrl(prev => {
+        const newUrls = { ...prev };
+        delete newUrls[doc.id];
+        return newUrls;
+      });
+    } catch (e) {
+      setDeleteMessage('Failed to delete podcast');
+    }
+    setPodcastLoading(null);
   };
 
   if (documents.length === 0) {
@@ -107,6 +188,18 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  {document.processed && !podcastUrl[document.id] && (
+                    <button
+                      className="p-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 border border-blue-200 dark:border-blue-700 rounded transition-colors duration-200 text-xs"
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleConvertToPodcast(document);
+                      }}
+                      disabled={podcastLoading === document.id}
+                    >
+                      {podcastLoading === document.id ? 'Converting...' : 'Convert to Podcast'}
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -115,6 +208,21 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                   <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
                     Source: {document.url}
                   </p>
+                </div>
+              )}
+              {podcastUrl[document.id] && (
+                <div className="mt-3 flex items-center gap-2">
+                  <audio controls src={podcastUrl[document.id]} style={{ width: '100%' }} />
+                  <button
+                    className="ml-2 p-1 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 border border-red-200 dark:border-red-700 rounded transition-colors duration-200 text-xs"
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleDeletePodcast(document);
+                    }}
+                    disabled={podcastLoading === document.id}
+                  >
+                    {podcastLoading === document.id ? 'Deleting...' : 'Delete Podcast'}
+                  </button>
                 </div>
               )}
             </div>

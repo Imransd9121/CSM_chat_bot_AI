@@ -11,11 +11,12 @@ export const useChat = (userId: string, token?: string) => {
   // Fetch chat history for a document
   const fetchChatHistory = async (document: Document) => {
     if (!token) return;
-    const response = await fetch(`${API_URL}/chat?doc_id=${document.id}`, {
+    const response = await fetch(`${API_URL}/chat?doc_id=${document.id}&t=${Date.now()}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (response.ok) {
       const chats = await response.json();
+      console.log('Fetched chats from backend:', chats);
       const messages: Message[] = chats.map((chat: any) => ({
         id: chat._id,
         type: 'user', // We'll add bot messages below
@@ -25,7 +26,7 @@ export const useChat = (userId: string, token?: string) => {
       })).flatMap((chat: any, idx: number, arr: any[]) => [
         chat,
         {
-          id: arr[idx]._id + '-bot',
+          id: ((arr[idx]._id || `bot-${idx}`) + '-bot'),
           type: 'bot',
           content: chats[idx].answer,
           timestamp: chats[idx].timestamp,
@@ -40,7 +41,14 @@ export const useChat = (userId: string, token?: string) => {
         createdAt: document.uploadedAt,
         updatedAt: new Date().toISOString()
       };
-      setCurrentSession(session);
+      setCurrentSession({
+        ...session,
+        messages: [...session.messages], // force new array reference
+      });
+      console.log('setCurrentSession called with:', session);
+      setTimeout(() => {
+        console.log('After setCurrentSession, currentSession:', session);
+      }, 0);
     }
   };
 
@@ -61,15 +69,6 @@ export const useChat = (userId: string, token?: string) => {
   const sendMessage = async (content: string, document: Document) => {
     if (!currentSession || !token) return;
     setIsTyping(true);
-    // Add user message
-    const userMessage: Message = {
-      id: Math.random().toString(36).substr(2, 9),
-      type: 'user',
-      content,
-      timestamp: new Date().toISOString(),
-      documentId: document.id
-    };
-    setCurrentSession((prev) => prev ? { ...prev, messages: [...prev.messages, userMessage] } : null);
     // Send to backend
     const response = await fetch(`${API_URL}/chat`, {
       method: 'POST',
@@ -80,15 +79,8 @@ export const useChat = (userId: string, token?: string) => {
       body: JSON.stringify({ doc_id: document.id, question: content })
     });
     if (response.ok) {
-      const data = await response.json();
-      const botMessage: Message = {
-        id: Math.random().toString(36).substr(2, 9),
-        type: 'bot',
-        content: data.answer,
-        timestamp: new Date().toISOString(),
-        documentId: document.id
-      };
-      setCurrentSession((prev) => prev ? { ...prev, messages: [...prev.messages, botMessage] } : null);
+      await fetchChatHistory(document);
+      console.log('After fetchChatHistory, currentSession:', currentSession);
     }
     setIsTyping(false);
   };
@@ -101,6 +93,11 @@ export const useChat = (userId: string, token?: string) => {
     setCurrentSession(null);
   };
 
+  const clearChat = () => {
+    setCurrentSession(null);
+    // Add any other chat-related state resets here if needed
+  };
+
   return {
     chatSessions: [], // Not used with backend
     currentSession,
@@ -108,6 +105,7 @@ export const useChat = (userId: string, token?: string) => {
     createSession,
     sendMessage,
     selectSession,
-    deleteSession
+    deleteSession,
+    clearChat,
   };
 };
