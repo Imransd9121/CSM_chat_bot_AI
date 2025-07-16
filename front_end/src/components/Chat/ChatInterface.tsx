@@ -290,7 +290,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <>
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col h-[600px] transition-colors duration-200">
+    <div className="bg-white dark:bg-gray-800 rounded-[15px] overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col h-[530px] transition-colors duration-200">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-t-xl">
         <div className="flex items-center justify-between">
@@ -521,10 +521,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             style={{
               flex: 1,
               padding: "10px",
-              borderRadius: "20px",
-              border: "1px solid #ccc",
+              borderRadius: "10px",
+              border: "1px solid #f1f1f1",
               outline: "none",
               fontSize: "1rem",
+              background: "#E8E8E8"
             }}
             onKeyDown={e => {
               if (e.key === "Enter" && question.trim() && !isRecording) sendText();

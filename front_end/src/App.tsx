@@ -84,8 +84,8 @@ function AppContent() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <Header user={user} onLogout={logout} />
       
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <main className="max-w-[95%] mx-auto  py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 mt-[80px] gap-8">
           {/* Left Column - Document Management */}
           <div className="lg:col-span-1 space-y-6">
             <DocumentUpload
@@ -104,7 +104,7 @@ function AppContent() {
           </div>
 
           {/* Right Column - Chat Interface */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 sticky top-[100px] h-[530px]">
             {selectedDocument && chat.currentSession ? (
               <ChatInterface
                 document={selectedDocument}
@@ -118,7 +118,7 @@ function AppContent() {
                 selectedDocId={selectedDocument.id}
               />
             ) : (
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center h-[600px] flex items-center justify-center transition-colors duration-200">
+              <div className="sticky top-[100px]  bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center h-[530px] flex items-center justify-center transition-colors duration-200">
                 <div>
                   <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-2xl">💬</span>
